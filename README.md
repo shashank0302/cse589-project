@@ -1,29 +1,14 @@
 # CLIP-SVD: Singular Value Few-shot Adaptation of Vision-Language Models
 
-## Introduction
+This repository contains my replication and improvement of the CLIP-SVD paper for few-shot biomedical image classification. CLIP-SVD is a parameter-efficient method that adapts Vision-Language Models by fine-tuning only 0.04% of parameters using Singular Value Decomposition.
 
-This repository contains the replication and improvement of **CLIP-SVD**, a state-of-the-art method for few-shot adaptation of Vision-Language Models (VLMs) to biomedical image classification tasks. The method achieves parameter-efficient adaptation by fine-tuning only **0.04%** of the model's parameters through Singular Value Decomposition (SVD).
+## What This Does
 
-The key features of this implementation include:
+- Adapts pre-trained CLIP/BiomedCLIP models to biomedical domains with very few examples (1-16 shots per class)
+- Uses SVD to modify only singular values while keeping singular vectors frozen
+- Tested on 10 biomedical datasets covering MRI, X-Ray, Histopathology, and other medical imaging modalities
 
-- **SVD-Based Adaptation**: Fine-tunes only singular values of weight matrices while freezing singular vectors
-- **Biomedical Domain Support**: Tested on 10 diverse biomedical datasets (MRI, X-Ray, Histopathology, etc.)
-- **Hyperparameter Optimization**: Includes learning rate tuning experiments showing improvements over baseline
-- **Full Replication**: Successfully replicates paper results within ±0.4% accuracy
-
-## Dependencies
-
-Ensure the following packages are installed. You can install them directly using the provided `requirements.txt` file.
-
-- Python 3.10
-- PyTorch 2.0.1
-- torchvision 0.15.2
-- open-clip-torch==2.23.0
-- transformers==4.35.2
-- numpy, pandas, scikit-learn
-- Other dependencies listed in `requirements.txt`
-
-To install dependencies, run:
+## Installation
 
 ```bash
 # Create conda environment
@@ -33,28 +18,13 @@ conda activate clip_svd
 # Install PyTorch (CUDA 11.8)
 pip install torch==2.0.1 torchvision==0.15.2 --index-url https://download.pytorch.org/whl/cu118
 
-# Install requirements
+# Install other dependencies
 pip install -r requirements.txt
 ```
 
-## Steps to Run the Code
+## Dataset Setup
 
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/shashank0302/cse589-project.git
-cd cse589-project
-```
-
-### 2. Prepare the Dataset
-
-The project uses 10 biomedical datasets from the CLIP-SVD benchmark. Download datasets from [HuggingFace](https://huggingface.co/datasets/TahaKoleilat/BiomedCoOp/tree/main) or use the download script:
-
-```bash
-bash scripts/download_all_biomedical.sh
-```
-
-Ensure the dataset follows the structure below:
+Download the 10 biomedical datasets from [HuggingFace](https://huggingface.co/datasets/TahaKoleilat/BiomedCoOp/tree/main). Each dataset should be placed in the `data/` directory with the following structure:
 
 ```
 data/
@@ -64,70 +34,53 @@ data/
 ├── Kvasir/
 │   ├── Kvasir/
 │   └── split_Kvasir.json
-├── ... (other datasets)
+├── ... (other 8 datasets)
 ```
 
-### 3. Run the Code
+The datasets include: BTMRI, BUSI, CHMNIST, COVID_19, CTKidney, KneeXray, Kvasir, LungColon, OCTMNIST, and RETINA.
 
-#### Replication on All Datasets
+## Running the Code
 
-Run full replication on all 10 biomedical datasets:
+### Full Replication
+
+To replicate results on all 10 datasets with all shot values (1, 2, 4, 8, 16):
 
 ```bash
 bash scripts/replicate_all_biomedical.sh
 ```
 
-#### Single Dataset Example
+This will take several hours and generates results in `outputs_fewshot/`.
 
-Run on a specific dataset with specified shots:
+### Single Dataset
+
+To test on a specific dataset:
 
 ```bash
 bash scripts/fewshot.sh kvasir 16 outputs_test
 ```
 
-#### Hyperparameter Tuning
+Replace `kvasir` with any dataset name and `16` with the number of shots (1, 2, 4, 8, or 16).
 
-Test different learning rates on all datasets:
+### Hyperparameter Tuning
+
+To test different learning rates and weight decay values:
 
 ```bash
-bash scripts/hyperparameter_tuning_all_v2.sh
+bash scripts/hyperparameter_tuning_improvements.sh
 
 # Compile results
-python scripts/compile_hyperparam_results.py
+python scripts/compile_improvements_results.py
 ```
 
-### Command Line Arguments
-
-```bash
-python main.py --root_path data --dataset <dataset_name> --shots <K> \
-               --output_dir <output_dir> --config configs/few_shot/<dataset>.yaml
-```
-
-- `--dataset`: Dataset name (e.g., kvasir, btmri, covid)
-- `--shots`: Number of shots per class (1, 2, 4, 8, 16)
-- `--output_dir`: Directory to save results
-- `--config`: Path to dataset config file
-- `--tasks`: Number of random seeds (default: 3)
-
-### 4. Monitor Training
-
-Logs during training will display:
-- Training accuracy and loss for each epoch
-- Final test accuracy
-- Results saved to CSV files in the output directory
-
-Results are saved to:
-- `outputs_fewshot/<dataset>.csv`: Individual dataset results
-- `outputs_fewshot/biomedical_fewshot_results.csv`: All results
-- `outputs_hyperparams/hyperparameter_summary.csv`: Hyperparameter tuning results
+Results are saved in `outputs_improvements/`.
 
 ## Results
 
 ### Replication Results
 
-Our replication successfully matches the paper's results:
+I successfully replicated the paper's results on all 10 biomedical datasets. The averaged accuracy across all datasets matches the paper within ±0.4%:
 
-| Shots (K) | Paper | Replicated | Difference |
+| Shots (K) | Paper | My Results | Difference |
 |-----------|-------|------------|------------|
 | 1 | 56.35% | 55.95% | -0.40% |
 | 2 | 62.63% | 62.41% | -0.22% |
@@ -135,40 +88,21 @@ Our replication successfully matches the paper's results:
 | 8 | 73.26% | 73.33% | +0.07% |
 | 16 | 76.46% | 76.81% | +0.35% |
 
+The small differences are expected due to random seed variations in few-shot sample selection. Overall, the replication confirms the paper's reported performance.
+
 ### Hyperparameter Tuning Results
 
-Learning rate optimization on K=16 shots:
+I tested different learning rates and weight decay combinations to see if we could improve upon the baseline. Results for K=16 shots:
 
-| Learning Rate | Avg Accuracy | Change from Baseline |
-|---------------|--------------|----------------------|
-| 0.001 | 71.37% | -4.98% |
-| 0.0045 | 75.91% | -0.44% |
-| 0.005 (Baseline) | 76.35% | 0.00% |
-| **0.006 (Improved)** | **76.81%** | **+0.46%** |
-| 0.010 | 75.58% | -0.77% |
+| Learning Rate | Weight Decay | Avg Accuracy | Change from Baseline |
+|---------------|--------------|--------------|----------------------|
+| 0.001 | 0.0 | 71.37% | -4.98% |
+| 0.0045 | 0.0 | 76.31% | +0.04% |
+| 0.005 | 0.0 | 76.35% | 0.00% (baseline) |
+| 0.006 | 0.0 | 76.10% | -0.25% |
+| 0.006 | 0.02 | 75.91% | -0.44% |
+| 0.010 | 0.0 | 75.58% | -0.77% |
 
-**Improvement:** Increasing learning rate to 0.006 achieved **+0.46%** improvement over baseline.
-
-## Repository Structure
-
-```
-CLIP-SVD/
-├── configs/              # Configuration files for each dataset
-│   ├── few_shot/         # Few-shot learning configs
-│   └── base2new/         # Base-to-novel configs
-├── datasets/             # Dataset loaders
-├── svf_utils/            # SVD implementation utilities
-├── scripts/              # Training and evaluation scripts
-│   ├── replicate_all_biomedical.sh
-│   ├── hyperparameter_tuning_all_v2.sh
-│   └── fewshot.sh
-├── outputs_fewshot/      # Replication results
-├── outputs_hyperparams/  # Hyperparameter tuning results
-├── data/                 # Dataset directory
-├── main.py               # Main training script
-├── train.py              # Training functions
-└── requirements.txt      # Dependencies
-```
-
+**Finding:** The baseline learning rate of 0.005 appears to be well-tuned. Slightly lower learning rates (0.0045) showed marginal improvement (+0.04%), while higher rates degraded performance. This suggests the paper's hyperparameter selection was appropriate for the biomedical domain.
 
 
